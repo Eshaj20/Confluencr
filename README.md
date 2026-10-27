@@ -1,21 +1,66 @@
 # Transaction Ledger API (FastAPI + Postgres)
 
+A backend API for creating accounts, recording immutable credit and debit transactions, retrieving balances and history, and transferring money atomically between accounts.
+
+## Live deployment
+
+- API documentation: https://tr-4f86040cf995477798d60356f9e04a82.ecs.ap-southeast-2.on.aws/docs
+- Health check: https://tr-4f86040cf995477798d60356f9e04a82.ecs.ap-southeast-2.on.aws/health
+
+The deployed service runs on AWS ECS Express Mode. It uses a container image in Amazon ECR, retrieves `DATABASE_URL` from AWS Secrets Manager, and connects to a Supabase PostgreSQL database.
+
 ## Run locally
+Create a virtual environment, install the dependencies, run `schema.sql` in the Supabase SQL Editor (or with `psql`), and set `DATABASE_URL` to a Supabase connection string. Do not commit the connection string or database password.
+
+### PowerShell (Windows)
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+$env:DATABASE_URL = "postgresql://..."
+python -m uvicorn main:app --reload
+```
+
+Open http://127.0.0.1:8000/docs.
+
+### macOS / Linux
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-# Run schema.sql in Supabase SQL editor (or psql)
 export DATABASE_URL="postgresql://user:pass@host:5432/postgres"
-uvicorn main:app --reload      # docs at http://localhost:8000/docs
+python -m uvicorn main:app --reload
 ```
 
 ## Tests
-Run against a throwaway database (never production):
+Run against a separate test database, never the deployed demo database. Run `schema.sql` in that database first.
+
+### PowerShell (Windows)
+```powershell
+python -m pip install -r requirements-dev.txt
+$env:DATABASE_URL = "postgresql://..."
+python -m pytest -v
+```
+
+### macOS / Linux
 ```bash
 pip install -r requirements-dev.txt
 export DATABASE_URL="postgresql://user:pass@localhost:5432/ledger_test"
-pytest -v
+python -m pytest -v
 ```
-Covers validation, duplicates, insufficient balance, pagination/filter/sort, transfers, rollback, and concurrent debits/duplicates.
+
+Verified result: **33 passed**. The suite covers validation, duplicate submissions, insufficient balance, pagination, filtering, sorting, transfers, rollback behavior, and concurrent debits and duplicate requests.
+
+## Deployment
+
+The repository includes a `Dockerfile` for the FastAPI service.
+
+1. Build the image with Docker and push it to Amazon ECR.
+2. Deploy the image through AWS ECS Express Mode, configured with container port `8000` and health path `/health`.
+3. Store the Supabase connection string in AWS Secrets Manager as `DATABASE_URL`.
+4. Grant the ECS task execution role permission to read that secret.
+
+The local Docker engine is only used to build and push the image. The deployed service runs independently in AWS.
 
 ## Endpoints
 | Method | Path | Notes |
