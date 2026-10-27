@@ -20,6 +20,12 @@ Ref = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_
 Amount = Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=2)]
 
 
+@app.get("/health")
+def health_check():
+    """Lightweight service health check for the deployment platform."""
+    return {"status": "ok"}
+
+
 # ---------- helpers ----------
 class ApiError(Exception):
     def __init__(self, status, code, message, extra=None):
